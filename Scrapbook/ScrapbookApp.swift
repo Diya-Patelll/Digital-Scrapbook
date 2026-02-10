@@ -11,7 +11,7 @@ import SwiftData
 @main
 struct ScrapbookApp: App {
     @State private var showSplash = true
-    @State private var textOpacity = 1.0
+    @State private var textOpacity = 0.0
     
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
@@ -36,13 +36,15 @@ struct ScrapbookApp: App {
                         .foregroundColor(.white)
                         .font(.largeTitle)
                         .padding()
+                        .opacity(textOpacity)
                 }
                 .onAppear {
-                    withAnimation(.easeOut(duration: 1)) {
-                        textOpacity = 0.0
+                    // Fade text in
+                    withAnimation(.easeOut(duration: 0.8)) {
+                        textOpacity = 1.0
                     }
-                    
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+                    // Then fade out to Contentview
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
                         showSplash = false
                     }
                 }
