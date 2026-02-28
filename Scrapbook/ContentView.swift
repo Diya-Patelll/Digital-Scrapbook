@@ -62,35 +62,17 @@ struct ContentView: View {
 
 struct ItemDetailView: View {
     @Bindable var item: Item
-    @State private var photoSelection: PhotosPickerItem?
-    @State private var dragOffset: CGSize = .zero // tracks movement of finger
+    @State private var photoSelection: [PhotosPickerItem] = [] // allows multiple selections
     
     var body: some View{
-        VStack {
-            // check if the item has image data and to be converted to UIimage
-            if let imageData = item.imageData, let uiImage = UIImage(data: imageData) {
-                Image(uiImage: uiImage)
-                    .resizable()
-                    .scaledToFit()
-                    .offset(x: item.offSetX + dragOffset.width, y: item.offSetY + dragOffset.height)
-                    .gesture(
-                        DragGesture()
-                            .onChanged { value in
-                                // updates postions as your finger moves
-                                dragOffset = value.translation
-                            }
-                            .onEnded{ value in
-                                // save position once finger is lifted
-                                item.offSetX += value.translation.width
-                                item.offSetY += value.translation.height
-                                
-                                dragOffset = .zero
-                            }
-                    )
-            } else {
-                // show when theres no photo
+        ZStack { // switched to Zstack so photos is on top of each other
+            if item.photos.isEmpty {
+                
+                // shows when theres no photo
                 ContentUnavailableView("No added image", systemImage: "photo.badge.minus")
-                    
+            } else {
+                ForEach(item.photos) { photo in IndividualPhotoView(photo:photo, allPhotos: item.photos)
+                }
             }
         }
         .navigationTitle(item.timestamp.formatted(date: .numeric, time: .omitted))
@@ -102,17 +84,60 @@ struct ItemDetailView: View {
                 }
             }
         }
-        .onChange(of: photoSelection) {oldValue,newValue in
+        .onChange(of: photoSelection) {_, newValue in
             Task {
-                if let data = try? await newValue?.loadTransferable(type: Data.self) {
-                    item.imageData = data
+                for selection in newValue {
+                    if let data = try? await selection.loadTransferable(type: Data.self) {
+                        // sets initial zIndex from how many photos are already there
+                        let newZIndex = Double(item.photos.count)
+                        let newPhoto = ScrapbookPhoto(imageData: data, zIndex: newZIndex)
+                        item.photos.append(newPhoto)
+                    }
                 }
+                
+                // clear selections
+                photoSelection = []
             }
+        }
+    }
+}
+
+
+// handles each photos for its own drag gesture
+struct IndividualPhotoView: View {
+    @Bindable var photo: ScrapbookPhoto
+    @State private var dragOffset: CGSize = .zero // tracks movement of finger
+    var allPhotos: [ScrapbookPhoto] // access to other photos 
+    
+    var body: some View {
+        if let data = photo.imageData, let uiImage = UIImage(data: data) {
+            Image(uiImage: uiImage)
+                .resizable()
+                .scaledToFit()
+                .zIndex(photo.zIndex) // stacking order
+                .offset(x: photo.offSetX + dragOffset.width, y: photo.offSetY + dragOffset.height)
+                .gesture(
+                    DragGesture()
+                        .onChanged { value in
+                            // bring to front once movement starts
+                            let maxZ = allPhotos.map{$0.zIndex}.max() ?? 0
+                            photo.zIndex = maxZ + 1
+                            // updates postions as your finger moves
+                            dragOffset = value.translation
+                        }
+                        .onEnded{ value in
+                            // save position once finger is lifted
+                            photo.offSetX += value.translation.width
+                            photo.offSetY += value.translation.height
+                            
+                            dragOffset = .zero
+                        }
+                )
         }
     }
 }
 
 #Preview {
     ContentView()
-        .modelContainer(for: Item.self, inMemory: true)
+        .modelContainer(for: [Item.self, ScrapbookPhoto.self], inMemory: true)
 }

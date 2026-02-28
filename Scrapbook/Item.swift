@@ -11,6 +11,15 @@ import SwiftData
 @Model
 final class Item {
     var timestamp: Date
+    var photos: [ScrapbookPhoto] = []
+    
+    init(timestamp: Date) {
+        self.timestamp = timestamp
+    }
+}
+
+@Model
+final class ScrapbookPhoto {
     
     // store the photo
     @Attribute(.externalStorage) var imageData: Data?
@@ -19,10 +28,13 @@ final class Item {
     var offSetX: Double = 0.0
     var offSetY: Double = 0.0
     
-    init(timestamp: Date, imageData: Data?=nil, offSetX: Double=0.0, offSetY: Double=0.0) {
-        self.timestamp = timestamp
+    // stacking order of images
+    var zIndex: Double = 0.0
+    
+    init(imageData: Data?=nil, offSetX: Double=0.0, offSetY: Double=0.0, zIndex: Double = 0.0) {
         self.imageData = imageData
         self.offSetX = offSetX
         self.offSetY = offSetY
+        self.zIndex = zIndex
     }
 }
