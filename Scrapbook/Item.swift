@@ -28,13 +28,21 @@ final class ScrapbookPhoto {
     var offSetX: Double = 0.0
     var offSetY: Double = 0.0
     
+    // size of image
+    var scale: Double = 1.0
+    
+    // roation of image
+    var rotation: Double = 0.0
+    
     // stacking order of images
     var zIndex: Double = 0.0
     
-    init(imageData: Data?=nil, offSetX: Double=0.0, offSetY: Double=0.0, zIndex: Double = 0.0) {
+    init(imageData: Data?=nil, offSetX: Double=0.0, offSetY: Double=0.0, zIndex: Double = 0.0, scale: Double = 1.0, rotation: Double = 0.0) {
         self.imageData = imageData
         self.offSetX = offSetX
         self.offSetY = offSetY
         self.zIndex = zIndex
+        self.scale = scale
+        self.rotation = rotation
     }
 }

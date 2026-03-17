@@ -107,13 +107,21 @@ struct ItemDetailView: View {
 struct IndividualPhotoView: View {
     @Bindable var photo: ScrapbookPhoto
     @State private var dragOffset: CGSize = .zero // tracks movement of finger
-    var allPhotos: [ScrapbookPhoto] // access to other photos 
+    @State private var finalScale: CGFloat = 1.0 // end of scale
+    
+    @GestureState private var activeScale: CGFloat = 1.0 // active gesture values
+    @GestureState private var activeRotation: Angle = .zero
+    
+    
+    var allPhotos: [ScrapbookPhoto] // access to other photos
     
     var body: some View {
         if let data = photo.imageData, let uiImage = UIImage(data: data) {
             Image(uiImage: uiImage)
                 .resizable()
                 .scaledToFit()
+                .rotationEffect(Angle(degrees: photo.rotation) + activeRotation)
+                .scaleEffect(photo.scale * activeScale)
                 .zIndex(photo.zIndex) // stacking order
                 .offset(x: photo.offSetX + dragOffset.width, y: photo.offSetY + dragOffset.height)
                 .gesture(
@@ -132,6 +140,24 @@ struct IndividualPhotoView: View {
                             
                             dragOffset = .zero
                         }
+                )
+                .gesture(
+                    SimultaneousGesture(
+                        MagnifyGesture() // scale feature
+                            .updating($activeScale) { value, state, _ in
+                                state = value.magnification
+                            }
+                            .onEnded { value in
+                                photo.scale *= value.magnification
+                            },
+                        RotateGesture() // rotate feature
+                            .updating($activeRotation) { value, state, _ in
+                                state = value.rotation
+                            }
+                            .onEnded{value in
+                                photo.rotation += value.rotation.degrees
+                            }
+                    )
                 )
         }
     }
