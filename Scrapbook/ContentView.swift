@@ -108,6 +108,8 @@ struct IndividualPhotoView: View {
     @Bindable var photo: ScrapbookPhoto
     @State private var dragOffset: CGSize = .zero // tracks movement of finger
     @State private var finalScale: CGFloat = 1.0 // end of scale
+    @State private var showingCropper = false
+    @State private var tempImage: UIImage? // holds image when cropping
     
     @GestureState private var activeScale: CGFloat = 1.0 // active gesture values
     @GestureState private var activeRotation: Angle = .zero
@@ -120,10 +122,38 @@ struct IndividualPhotoView: View {
             Image(uiImage: uiImage)
                 .resizable()
                 .scaledToFit()
+            
                 .rotationEffect(Angle(degrees: photo.rotation) + activeRotation)
                 .scaleEffect(photo.scale * activeScale)
                 .zIndex(photo.zIndex) // stacking order
                 .offset(x: photo.offSetX + dragOffset.width, y: photo.offSetY + dragOffset.height)
+                        
+                // hold for crop button to show
+                .contextMenu {
+                    Button{
+                        if let data = photo.imageData {
+                            tempImage = UIImage(data: data)
+                            showingCropper = true
+                        }
+                    } label : {
+                    
+                    Label(photo.isCropped ? "Original Size" : "Crop", systemImage: "crop")
+                    }
+                }
+                .fullScreenCover(isPresented: $showingCropper) {
+                    CropPicker(image: $tempImage)
+                        .onDisappear {
+                            if let newImage = tempImage {
+                                // saves newly cropped image
+                                photo.imageData = newImage.jpegData(compressionQuality: 0.8)
+                                
+                                photo.scale = 1.0
+                                photo.rotation = 0.0
+                            }
+                        }
+                }
+                
+                
                 .gesture(
                     DragGesture()
                         .onChanged { value in

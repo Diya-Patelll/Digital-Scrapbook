@@ -37,12 +37,16 @@ final class ScrapbookPhoto {
     // stacking order of images
     var zIndex: Double = 0.0
     
-    init(imageData: Data?=nil, offSetX: Double=0.0, offSetY: Double=0.0, zIndex: Double = 0.0, scale: Double = 1.0, rotation: Double = 0.0) {
+    // toggle between crop and original 
+    var isCropped: Bool = false
+    
+    init(imageData: Data?=nil, offSetX: Double=0.0, offSetY: Double=0.0, zIndex: Double = 0.0, scale: Double = 1.0, rotation: Double = 0.0, isCropped: Bool = false) {
         self.imageData = imageData
         self.offSetX = offSetX
         self.offSetY = offSetY
         self.zIndex = zIndex
         self.scale = scale
         self.rotation = rotation
+        self.isCropped = isCropped
     }
 }
