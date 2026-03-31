@@ -12,15 +12,17 @@ import PhotosUI
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var items: [Item]
-
+    @State private var selectedItemID: PersistentIdentifier? // stores ID of currently selected scrapbook for tabview
+    
     var body: some View {
         NavigationSplitView {
+            // list of scrapbook entries
             List {
                 ForEach(items) { item in
                     NavigationLink {
                         ItemDetailView(item: item)
                     } label: {
-                        Text(item.timestamp, format: Date.FormatStyle(date: .numeric, ))
+                        Text(item.timestamp, format: Date.FormatStyle(date: .numeric))
                     }
                 }
                 .onDelete(perform: deleteItems)
@@ -36,10 +38,80 @@ struct ContentView: View {
                 }
             }
         } detail: {
-            if let selectedItem = items.first {
-                ItemDetailView(item: selectedItem)
-            } else {
-                Text("Select an item")
+            detailCanvas
+        }
+        .onAppear{
+            // auto selects first item if nothing is selected
+            if selectedItemID == nil {
+                selectedItemID = items.first?.persistentModelID
+            }
+        }
+    }
+        
+    @ViewBuilder
+    private var detailCanvas: some View {
+        VStack(spacing: 0) {
+            // page view between scrapbook items
+            TabView(selection: $selectedItemID) {
+                ForEach(items) { item in
+                    ItemDetailView(item: item)
+                        .tag(item.persistentModelID) // identifies which item is currently active
+                }
+            }
+            .tabViewStyle(.page(indexDisplayMode: .never)) // disables swipe gesture
+            navigationFooter // bottom nav controls
+        }
+        .ignoresSafeArea(edges: .bottom) // foot background is against bottom
+    }
+        
+    // bottom navigation footer
+    private var navigationFooter: some View {
+        HStack {
+            // left arrow
+            Button(action: {movePage(by: -1) }) {
+                Image(systemName: "arrow.left.circle.fill")
+                    .font(.system(size: 40))
+            }
+            .disabled(isFirstPage) // when on first page you cant go back
+            .foregroundStyle(isFirstPage ? .gray: .blue)
+            
+            Spacer()
+            
+            // current status
+            Text("Page \(currentPageIndex + 1) of \(items.count)")
+                .font(.headline)
+            
+            Spacer()
+            
+            // right arrow
+            Button(action: {movePage(by: 1) }) {
+                Image(systemName: "arrow.right.circle.fill")
+                    .font(.system(size: 40))
+            }
+            .disabled(isLastPage) // when on last page you cant go any forward
+            .foregroundStyle(isLastPage ? .gray: .blue)
+        }
+        .padding(.horizontal, 40)
+        .padding(.bottom, 20)
+        .background(.thinMaterial)
+    }
+    
+    // navigation logic
+    // In item array calculates integer index of current selected item
+    private var currentPageIndex: Int {
+        items.firstIndex(where: { $0.persistentModelID == selectedItemID }) ?? 0
+    }
+    
+    // helper booleans to keep footer code readable
+    private var isFirstPage: Bool {selectedItemID == items.first?.persistentModelID}
+    private var isLastPage: Bool {selectedItemID == items.last?.persistentModelID}
+    
+    // updates selectedItemID based on arrow clicks
+    private func movePage(by delta: Int) {
+        let newIndex = currentPageIndex + delta
+        if newIndex >= 0 && newIndex < items.count {
+            withAnimation(.easeInOut) {
+                selectedItemID = items[newIndex].persistentModelID
             }
         }
     }
@@ -48,6 +120,7 @@ struct ContentView: View {
         withAnimation {
             let newItem = Item(timestamp: Date())
             modelContext.insert(newItem)
+            selectedItemID = newItem.persistentModelID
         }
     }
 
@@ -63,20 +136,61 @@ struct ContentView: View {
 struct ItemDetailView: View {
     @Bindable var item: Item
     @State private var photoSelection: [PhotosPickerItem] = [] // allows multiple selections
+    @State private var currentPageIndex = 0 // tracks active pages
     
-    var body: some View{
-        ZStack { // switched to Zstack so photos is on top of each other
-            if item.photos.isEmpty {
-                
-                // shows when theres no photo
-                ContentUnavailableView("No added image", systemImage: "photo.badge.minus")
-            } else {
-                ForEach(item.photos) { photo in IndividualPhotoView(photo:photo, allPhotos: item.photos)
+    var body: some View {
+        VStack(spacing: 0) {
+            TabView(selection: $currentPageIndex) {
+                // sort pages by index so it appears in correct order
+                ForEach(item.pages.sorted(by: { $0.index < $1.index })) { page in
+                    ZStack {
+                        Color.white.ignoresSafeArea() // background color
+                        
+                        if page.photos.isEmpty {
+                            // empty state of page
+                            ContentUnavailableView("No Added Photos", systemImage: "plus.viewfinder")
+                        } else {
+                            // layers photo
+                            ForEach(page.photos) { photo in
+                                IndividualPhotoView(photo: photo, allPhotos: page.photos)
+                            }
+                        }
+                    }
+                    .tag(page.index) // links zStack to Tabview selection
                 }
             }
+            .tabViewStyle(.page(indexDisplayMode: .never)) // horizontal swipe behavior
+            
+            // footer with arrows and add button
+            HStack (spacing: 30) {
+                // back arrow
+                Button(action: { withAnimation { currentPageIndex -= 1 }}) {
+                    Image(systemName: "arrow.left.circle.fill")
+                }
+                .disabled(currentPageIndex == 0)
+                
+                Spacer()
+                
+                // add page button
+                Button(action: addPage) {
+                    VStack {
+                        Image(systemName: "plus.circle.fill")
+                            .font(.title)
+                        Text("Add Page").font(.caption2)
+                    }
+                }
+                Spacer()
+                
+                // next arrow
+                Button(action: { withAnimation { currentPageIndex += 1 }}) {
+                    Image(systemName: "arrow.right.circle.fill")
+                }
+                .disabled(currentPageIndex == item.pages.count - 1)
+            }
+            .padding(.vertical, 2)
+            .background(.thinMaterial)
+            
         }
-        .navigationTitle(item.timestamp.formatted(date: .numeric, time: .omitted))
-        // button for top
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 PhotosPicker(selection: $photoSelection, matching: .images) {
@@ -84,20 +198,36 @@ struct ItemDetailView: View {
                 }
             }
         }
-        .onChange(of: photoSelection) {_, newValue in
-            Task {
-                for selection in newValue {
-                    if let data = try? await selection.loadTransferable(type: Data.self) {
-                        // sets initial zIndex from how many photos are already there
-                        let newZIndex = Double(item.photos.count)
-                        let newPhoto = ScrapbookPhoto(imageData: data, zIndex: newZIndex)
-                        item.photos.append(newPhoto)
-                    }
+        // add photo to current page were on
+        .onChange(of: photoSelection) { _, newValue in
+            addPhotosToCurrentPage(newValue)
+        }
+    }
+    
+    // creates new page and goes to it
+    private func addPage() {
+        let newIndex = item.pages.count
+        let newPage = ScrapbookPage(index: newIndex)
+        item.pages.append(newPage)
+        withAnimation {
+            currentPageIndex = newIndex
+        }
+    }
+    
+    private func addPhotosToCurrentPage(_ selections: [PhotosPickerItem]) {
+        // find page we are looking at
+        guard let currentPage = item.pages.first(where: { $0.index == currentPageIndex }) else { return }
+        
+        Task {
+            for selection in selections {
+                if let data = try? await selection.loadTransferable(type: Data.self) {
+                    // stacks new photo on top
+                    let newZIndex = Double(currentPage.photos.count)
+                    let newPhoto = ScrapbookPhoto(imageData: data, zIndex: newZIndex)
+                    currentPage.photos.append(newPhoto)
                 }
-                
-                // clear selections
-                photoSelection = []
             }
+            photoSelection = [] // clear selections
         }
     }
 }

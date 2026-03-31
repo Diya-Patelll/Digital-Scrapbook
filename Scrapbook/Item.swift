@@ -12,10 +12,23 @@ import SwiftData
 final class Item {
     var timestamp: Date
     var photos: [ScrapbookPhoto] = []
+    @Relationship(deleteRule: .cascade) var pages: [ScrapbookPage] = []
     
     init(timestamp: Date) {
         self.timestamp = timestamp
+        self.pages = [ScrapbookPage(index: 0)]
     }
+}
+
+@Model
+class ScrapbookPage {
+    var index: Int
+    @Relationship(deleteRule: .cascade) var photos: [ScrapbookPhoto] = []
+    init(index: Int) {
+        self.index = index
+        
+    }
+    
 }
 
 @Model
