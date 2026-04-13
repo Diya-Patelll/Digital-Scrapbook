@@ -12,7 +12,6 @@ import SwiftUI
 @Model
 final class Item {
     var timestamp: Date
-    var photos: [ScrapbookPhoto] = []
     @Relationship(deleteRule: .cascade) var pages: [ScrapbookPage] = []
     
     init(timestamp: Date) {

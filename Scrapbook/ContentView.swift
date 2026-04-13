@@ -256,7 +256,7 @@ struct PageContentView: View {
             } else {
                 // layers photo
                 ForEach(page.photos) { photo in
-                    IndividualPhotoView(photo: photo, allPhotos: page.photos)
+                    IndividualPhotoView(photo: photo, page: page, allPhotos: page.photos)
                         .zIndex(0)
                 }
                 // render texts
@@ -346,8 +346,19 @@ struct IndividualPhotoView: View {
     @GestureState private var activeScale: CGFloat = 1.0 // active gesture values
     @GestureState private var activeRotation: Angle = .zero
     
+    @Environment(\.modelContext) private var modelContext
+    let page: ScrapbookPage
     
     var allPhotos: [ScrapbookPhoto] // access to other photos
+    
+    // deletes photo logic
+    private func deletePhoto() {
+        withAnimation {
+            page.photos.removeAll(where: { $0.id == photo.id})
+            
+            modelContext.delete(photo)
+        }
+    }
     
     var body: some View {
         if let data = photo.imageData, let uiImage = UIImage(data: data) {
@@ -371,7 +382,14 @@ struct IndividualPhotoView: View {
                     
                     Label(photo.isCropped ? "Original Size" : "Crop", systemImage: "crop")
                     }
+                    // delete button
+                    Button(role: .destructive) {
+                        deletePhoto()
+                    } label: {
+                        Label("Delete", systemImage: "trash")
+                    }
                 }
+            
                 .fullScreenCover(isPresented: $showingCropper) {
                     CropPicker(image: $tempImage)
                         .onDisappear {
