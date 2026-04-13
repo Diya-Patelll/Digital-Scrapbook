@@ -7,6 +7,7 @@
 
 import Foundation
 import SwiftData
+import SwiftUI
 
 @Model
 final class Item {
@@ -24,11 +25,11 @@ final class Item {
 class ScrapbookPage {
     var index: Int
     @Relationship(deleteRule: .cascade) var photos: [ScrapbookPhoto] = []
+    @Relationship(deleteRule: .cascade) var texts: [ScrapbookText] = []
     init(index: Int) {
         self.index = index
         
     }
-    
 }
 
 @Model
@@ -61,5 +62,37 @@ final class ScrapbookPhoto {
         self.scale = scale
         self.rotation = rotation
         self.isCropped = isCropped
+    }
+}
+
+@Model
+class ScrapbookText {
+    var content: String
+    var offSetX: Double = 0.0
+    var offSetY: Double = 0.0
+    var zIndex: Double = 0.0
+    var colorName: String
+    
+    var boxColor: Color {
+        Self.color(for: colorName)
+    }
+    
+    static func color(for name: String) -> Color {
+        switch name {
+            case "red": return .red
+            case "orange": return .orange
+            case "green": return .green
+            case "blue": return .blue
+            case "purple": return .purple
+            default: return .black
+        }
+    }
+    
+    init(content: String, offSetX: Double, offSetY: Double, zIndex: Double, colorName: String) {
+        self.content = content
+        self.offSetX = offSetX
+        self.offSetY = offSetY
+        self.zIndex = zIndex
+        self.colorName = colorName
     }
 }

@@ -137,26 +137,15 @@ struct ItemDetailView: View {
     @Bindable var item: Item
     @State private var photoSelection: [PhotosPickerItem] = [] // allows multiple selections
     @State private var currentPageIndex = 0 // tracks active pages
+    @State private var showColorPicker = false
     
     var body: some View {
         VStack(spacing: 0) {
             TabView(selection: $currentPageIndex) {
                 // sort pages by index so it appears in correct order
                 ForEach(item.pages.sorted(by: { $0.index < $1.index })) { page in
-                    ZStack {
-                        Color.white.ignoresSafeArea() // background color
-                        
-                        if page.photos.isEmpty {
-                            // empty state of page
-                            ContentUnavailableView("No Added Photos", systemImage: "plus.viewfinder")
-                        } else {
-                            // layers photo
-                            ForEach(page.photos) { photo in
-                                IndividualPhotoView(photo: photo, allPhotos: page.photos)
-                            }
-                        }
-                    }
-                    .tag(page.index) // links zStack to Tabview selection
+                    PageContentView(page: page)
+                        .tag(page.index) // links zStack to Tabview selection
                 }
             }
             .tabViewStyle(.page(indexDisplayMode: .never)) // horizontal swipe behavior
@@ -193,16 +182,78 @@ struct ItemDetailView: View {
         }
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
-                PhotosPicker(selection: $photoSelection, matching: .images) {
-                    Image(systemName: "photo.badge.plus")
+                HStack(spacing: 20){
+                    // text button
+                    ZStack(alignment: .top){
+                        Button {
+                            withAnimation{
+                                showColorPicker.toggle()
+                            }
+                        } label: {
+                            Image(systemName: "text.cursor")
+                        }
+                        // options of colors show
+                        .popover(isPresented: $showColorPicker) {
+                            VStack(spacing: 20) {
+                                ForEach(["red", "orange", "green", "blue", "black"], id: \.self) { colorName in
+                                    Button {
+                                        addText(color: colorName)
+                                        showColorPicker = false
+                                    } label: {
+                                        Circle()
+                                            .fill(ScrapbookText.color(for: colorName))
+                                            .frame(width: 25, height: 25)
+                                            .shadow(radius: 2)
+                                    }
+                                }
+                            }
+                            .padding(15)
+                            .presentationCompactAdaptation(.popover)
+                        }
+                    }
+                    
+                    PhotosPicker(selection: $photoSelection, matching: .images) {
+                        Image(systemName: "photo.badge.plus")
+                    }
                 }
             }
         }
-        // add photo to current page were on
-        .onChange(of: photoSelection) { _, newValue in
-            addPhotosToCurrentPage(newValue)
+    
+    // add photo to current page were on
+    .onChange(of: photoSelection) { _, newValue in
+        addPhotosToCurrentPage(newValue)
+    }
+}
+    
+struct PageContentView: View {
+    let page: ScrapbookPage
+        
+    var body:some View {
+        ZStack {
+            Color.white.ignoresSafeArea() // background color
+                .onTapGesture {
+                    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil,for:nil)
+                }
+                
+            if page.photos.isEmpty && page.texts.isEmpty{
+                // empty state of page
+                ContentUnavailableView("No Added Photos", systemImage: "plus.viewfinder")
+            } else {
+                // layers photo
+                ForEach(page.photos) { photo in
+                    IndividualPhotoView(photo: photo, allPhotos: page.photos)
+                        .zIndex(0)
+                }
+                // render texts
+                ForEach(page.texts) { textItem in
+                    TextView(text: textItem, allTexts: page.texts)
+                        .zIndex(1)
+                }
+            }
         }
     }
+}
+
     
     // creates new page and goes to it
     private func addPage() {
@@ -229,6 +280,18 @@ struct ItemDetailView: View {
             }
             photoSelection = [] // clear selections
         }
+    }
+    
+private func addText(color:String) {
+    guard let currentPage = item.pages.first(where: {$0.index == currentPageIndex})
+        else {
+            return
+        }
+        
+        let newZ = Double(currentPage.texts.count)
+        
+        let newText = ScrapbookText(content: "", offSetX: 50.0,offSetY: 50.0, zIndex: newZ, colorName: color)
+        currentPage.texts.append(newText)
     }
 }
 
@@ -325,5 +388,5 @@ struct IndividualPhotoView: View {
 
 #Preview {
     ContentView()
-        .modelContainer(for: [Item.self, ScrapbookPhoto.self], inMemory: true)
+        .modelContainer(for: [Item.self, ScrapbookPhoto.self, ScrapbookText.self], inMemory: true)
 }
