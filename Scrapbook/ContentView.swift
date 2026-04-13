@@ -144,11 +144,14 @@ struct ItemDetailView: View {
             TabView(selection: $currentPageIndex) {
                 // sort pages by index so it appears in correct order
                 ForEach(item.pages.sorted(by: { $0.index < $1.index })) { page in
-                    PageContentView(page: page)
+                    PageContentView(page: page, activePageIndex: $currentPageIndex)
                         .tag(page.index) // links zStack to Tabview selection
                 }
             }
             .tabViewStyle(.page(indexDisplayMode: .never)) // horizontal swipe behavior
+            .onChange(of: currentPageIndex) {
+                UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+            }
             
             // footer with arrows and add button
             HStack (spacing: 30) {
@@ -159,6 +162,17 @@ struct ItemDetailView: View {
                 .disabled(currentPageIndex == 0)
                 
                 Spacer()
+                
+                // delete page button
+                Button(role: .destructive, action: deleteCurrentPage) {
+                    VStack {
+                        Image(systemName: "trash.circle.fill")
+                            .font(.title)
+                        Text("Delete").font(.caption2)
+                    }
+                }
+                .disabled(item.pages.count <= 1)
+                .foregroundStyle(item.pages.count <= 1 ? .gray : .red)
                 
                 // add page button
                 Button(action: addPage) {
@@ -227,6 +241,7 @@ struct ItemDetailView: View {
     
 struct PageContentView: View {
     let page: ScrapbookPage
+    @Binding var activePageIndex: Int
         
     var body:some View {
         ZStack {
@@ -246,7 +261,12 @@ struct PageContentView: View {
                 }
                 // render texts
                 ForEach(page.texts) { textItem in
-                    TextView(text: textItem, allTexts: page.texts)
+                    TextView(text: textItem,
+                             activePageIndex: $activePageIndex,
+                             pageIndex: page.index,
+                             allTexts: page.texts
+
+                    )
                         .zIndex(1)
                 }
             }
@@ -282,6 +302,25 @@ struct PageContentView: View {
         }
     }
     
+    
+private func deleteCurrentPage() {
+    // find page were looking for
+    if let indexToDelete = item.pages.firstIndex(where: { $0.index == currentPageIndex}) {
+        withAnimation {
+            // remove page
+            item.pages.remove(at: indexToDelete)
+            // re-index remain pages so numbers arent messed up
+            for i in 0..<item.pages.count {
+                item.pages[i].index = i
+            }
+                
+            if currentPageIndex >= item.pages.count {
+                currentPageIndex = max(0, item.pages.count - 1)
+            }
+        }
+    }
+}
+    
 private func addText(color:String) {
     guard let currentPage = item.pages.first(where: {$0.index == currentPageIndex})
         else {
@@ -290,7 +329,7 @@ private func addText(color:String) {
         
         let newZ = Double(currentPage.texts.count)
         
-        let newText = ScrapbookText(content: "", offSetX: 50.0,offSetY: 50.0, zIndex: newZ, colorName: color)
+    let newText = ScrapbookText(content: "", offSetX: 50.0,offSetY: 50.0, zIndex: newZ, colorName: color, isNew: true)
         currentPage.texts.append(newText)
     }
 }

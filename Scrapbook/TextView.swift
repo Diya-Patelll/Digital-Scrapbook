@@ -9,9 +9,11 @@ import SwiftUI
 
 struct TextView: View {
     @Bindable var text: ScrapbookText
+    @Binding var activePageIndex: Int
     @State private var dragOffset: CGSize = .zero
     @FocusState private var isFocused: Bool
     @Environment(\.colorScheme) var colorScheme
+    let pageIndex: Int
     var allTexts: [ScrapbookText] // handles layering
 
     
@@ -22,7 +24,7 @@ struct TextView: View {
             .frame(minWidth: 100)
             .foregroundStyle(text.boxColor)
             .cornerRadius(4)
-            .focused($isFocused) 
+            .focused($isFocused)
             .offset(x: text.offSetX + dragOffset.width, y: text.offSetY + dragOffset.height)
             .zIndex(text.zIndex)
             .gesture(
@@ -39,7 +41,10 @@ struct TextView: View {
                     }
                 )
             .onAppear {
-                isFocused = true
+                if text.isNew && pageIndex == activePageIndex {
+                    isFocused = true
+                    text.isNew = false
+                }
             }
     }
 }
