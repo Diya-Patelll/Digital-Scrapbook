@@ -9,31 +9,68 @@ import SwiftUI
 import SwiftData
 import PhotosUI
 
+extension Color {
+    static let scrapbookBackground = Color(red: 0.97, green: 0.95, blue: 0.93) // #f7f3ed
+    static let scrapbookAccent = Color(red: 0.92, green: 0.88, blue: 0.82)     // #ece1d1
+    static let scrapbookText = Color(red: 0.2, green: 0.2, blue: 0.2)
+}
+
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
-    @Query private var items: [Item]
+    @Query(sort: \Item.timestamp, order: .reverse) private var items: [Item]
     @State private var selectedItemID: PersistentIdentifier? // stores ID of currently selected scrapbook for tabview
     
     var body: some View {
         NavigationSplitView {
-            // list of scrapbook entries
-            List {
-                ForEach(items) { item in
-                    NavigationLink {
-                        ItemDetailView(item: item)
-                    } label: {
-                        Text(item.timestamp, format: Date.FormatStyle(date: .numeric))
+            ZStack {
+                Color.scrapbookBackground
+                            .ignoresSafeArea()
+                VStack(alignment: .leading, spacing: 0) {
+                    // header text
+                    Text("My Scrapbooks")
+                        .font(.custom("Georgia-Bold", size: 32))
+                        .padding(.horizontal, 20)
+                        .padding(.top, -100)
+                    // list of scrapbook entries
+                    List {
+                        ForEach(items) { item in
+                            ZStack{
+                                ScrapbookRow(item: item)
+                                
+                                NavigationLink(destination: ItemDetailView(item: item)) {
+                                    EmptyView()
+                                }
+                                .opacity(0)
+                            }
+                            .listRowBackground(Color.clear)
+                            .listRowSeparator(.hidden)
+                            .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+                        }
+                        .onDelete(perform: deleteItems)
                     }
+                    .listStyle(.plain)
+                    .scrollContentBackground(.hidden)
                 }
-                .onDelete(perform: deleteItems)
-            }
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    EditButton()
-                }
-                ToolbarItem {
-                    Button(action: addItem) {
-                        Label("Add Item", systemImage: "plus")
+            
+                .toolbar {
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Button(action: addItem) {
+                            Image(systemName: "plus")
+                                .fontWeight(.bold)
+                                .padding(8)
+                                .background(Color(.systemGray5))
+                                .clipShape(Circle())
+                        }
+                        
+                        // Edit Button
+                        EditButton()
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(Color(.systemGray5))
+                            .clipShape(Capsule())
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                        
                     }
                 }
             }
@@ -47,6 +84,7 @@ struct ContentView: View {
             }
         }
     }
+        
         
     @ViewBuilder
     private var detailCanvas: some View {
@@ -263,6 +301,7 @@ struct PageContentView: View {
                 ForEach(page.texts) { textItem in
                     TextView(text: textItem,
                              activePageIndex: $activePageIndex,
+                             page: page,
                              pageIndex: page.index,
                              allTexts: page.texts
 
@@ -440,6 +479,58 @@ struct IndividualPhotoView: View {
                     )
                 )
         }
+    }
+}
+
+struct ScrapbookRow: View {
+    let item: Item
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            // head text ": 2026"
+            Text(": \(item.timestamp, format: .dateTime.year())")
+                .font(.system(size: 16, weight: .bold))
+                .padding(.leading, 4)
+
+            HStack(spacing: 16) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color(red: 0.92, green: 0.88, blue: 0.82))
+                    Image(systemName: "book.closed.fill")
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: 30, height: 30)
+                        .foregroundColor(Color(red: 0.6, green: 0.5, blue: 0.3))
+                        .overlay(alignment: .bottomLeading) {
+                            Image(systemName: "star.fill")
+                                .font(.system(size: 10))
+                                .foregroundColor(.white)
+                                .padding(4)
+                        }
+                }
+                .frame(width: 60, height: 60)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(item.timestamp, format: .dateTime.month().day().year())
+                        .font(.system(size: 17, weight: .semibold))
+                    
+                    Text("\(item.pages.count) Pages")
+                        .font(.system(size: 14))
+                        .foregroundColor(.secondary)
+                }
+
+                Spacer()
+
+                // arrow
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(.secondary)
+            }
+        }
+        .padding(16)
+        .background(Color.white)
+        .cornerRadius(24)
+        .shadow(color: .black.opacity(0.05), radius: 5, x: 0, y: 2)
     }
 }
 

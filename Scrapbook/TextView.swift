@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import SwiftData
 
 struct TextView: View {
     @Bindable var text: ScrapbookText
@@ -13,9 +14,10 @@ struct TextView: View {
     @State private var dragOffset: CGSize = .zero
     @FocusState private var isFocused: Bool
     @Environment(\.colorScheme) var colorScheme
+    @Environment(\.modelContext) private var modelContext
+    var page: ScrapbookPage
     let pageIndex: Int
     var allTexts: [ScrapbookText] // handles layering
-
     
     var body: some View {
         TextField("Type here..", text: $text.content, axis: .vertical)
@@ -44,6 +46,17 @@ struct TextView: View {
                 if text.isNew && pageIndex == activePageIndex {
                     isFocused = true
                     text.isNew = false
+                }
+            }
+            .contextMenu{
+                Button(role: .destructive) {
+                    withAnimation{
+                        // remove from page array
+                        page.texts.removeAll(where: { $0.id == text.id})
+                        modelContext.delete(text)
+                    }
+                } label: {
+                    Label("Delete Text", systemImage: "trash")
                 }
             }
     }
