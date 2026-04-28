@@ -5,7 +5,7 @@ A digital scrapbooking tool built for IOS, that allows users to create artistic 
 
 - Note for Users: This app is currently in development and is not yet available on the App Store.
 
-<h2>How to get app</h2>
+<h2>How to use as a Developer</h2>
 <h4>To use Digital Scrapbook on your device, you must have access to a Mac with Xcode installed </h4>
 
 1. Clone/Download this repository
