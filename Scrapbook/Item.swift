@@ -11,10 +11,12 @@ import SwiftUI
 
 @Model
 final class Item {
+    var title: String
     var timestamp: Date
     @Relationship(deleteRule: .cascade) var pages: [ScrapbookPage] = []
     
-    init(timestamp: Date) {
+    init(title: String = "Title", timestamp: Date) {
+        self.title = title
         self.timestamp = timestamp
         self.pages = [ScrapbookPage(index: 0)]
     }
@@ -84,6 +86,7 @@ class ScrapbookText {
             case "green": return .green
             case "blue": return .blue
             case "purple": return .purple
+            case "white": return .white
             default: return .black
         }
     }

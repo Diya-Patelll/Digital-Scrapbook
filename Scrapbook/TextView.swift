@@ -12,9 +12,12 @@ struct TextView: View {
     @Bindable var text: ScrapbookText
     @Binding var activePageIndex: Int
     @State private var dragOffset: CGSize = .zero
+    @State private var finalOffset: CGSize = .zero
     @FocusState private var isFocused: Bool
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.modelContext) private var modelContext
+    @GestureState private var fingerOffset: CGSize = .zero
+    
     var page: ScrapbookPage
     let pageIndex: Int
     var allTexts: [ScrapbookText] // handles layering
@@ -27,19 +30,22 @@ struct TextView: View {
             .foregroundStyle(text.boxColor)
             .cornerRadius(4)
             .focused($isFocused)
-            .offset(x: text.offSetX + dragOffset.width, y: text.offSetY + dragOffset.height)
+            .offset(x: text.offSetX + fingerOffset.width,y: text.offSetY + fingerOffset.height)
             .zIndex(text.zIndex)
             .gesture(
-                DragGesture(minimumDistance: 5)
-                    .onChanged { value in
+                DragGesture(minimumDistance: 0)
+                    .updating($fingerOffset) { value, state, _ in
+                        state = value.translation
+                    }
+                    .onChanged { _ in
                         let maxZ = allTexts.map { $0.zIndex }.max() ?? 0
-                        text.zIndex = maxZ + 1
-                        dragOffset = value.translation
+                        if text.zIndex <= maxZ {
+                            text.zIndex = maxZ + 1
+                        }
                     }
                     .onEnded { value in
                         text.offSetX += value.translation.width
                         text.offSetY += value.translation.height
-                        dragOffset = .zero
                     }
                 )
             .onAppear {
