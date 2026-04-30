@@ -177,7 +177,7 @@ private func addText(color:String) {
         
         let newZ = Double(currentPage.texts.count)
         
-    let newText = ScrapbookText(content: "", offSetX: 50.0,offSetY: 50.0, zIndex: newZ, colorName: color, isNew: true)
+    let newText = ScrapbookText(content: "", offSetX: 50.0, offSetY: 50.0, zIndex: newZ, scale: 1.0, colorName: color, isNew: true)
         currentPage.texts.append(newText)
     }
 }

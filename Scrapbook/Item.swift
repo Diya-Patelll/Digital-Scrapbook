@@ -72,6 +72,7 @@ class ScrapbookText {
     var offSetX: Double = 0.0
     var offSetY: Double = 0.0
     var zIndex: Double = 0.0
+    var scale: Double = 1.0
     var colorName: String
     var isNew: Bool = false
     
@@ -91,11 +92,12 @@ class ScrapbookText {
         }
     }
     
-    init(content: String, offSetX: Double, offSetY: Double, zIndex: Double, colorName: String, isNew: Bool = false) {
+    init(content: String, offSetX: Double, offSetY: Double, zIndex: Double, scale: Double = 1.0, colorName: String, isNew: Bool = false) {
         self.content = content
         self.offSetX = offSetX
         self.offSetY = offSetY
         self.zIndex = zIndex
+        self.scale = scale
         self.colorName = colorName
         self.isNew = isNew
     }

@@ -22,22 +22,29 @@ struct PageContentView: View {
                 // empty state of page
                 ContentUnavailableView("No Added Photos", systemImage: "plus.viewfinder")
             } else {
-                // layers photo
-                ForEach(page.photos) { photo in
-                    IndividualPhotoView(photo: photo, page: page, allPhotos: page.photos)
-                        .zIndex(0)
+                ZStack {
+                    // layers photo
+                    ForEach(page.photos) { photo in
+                        IndividualPhotoView(photo: photo, page: page, allPhotos: page.photos)
+                            .zIndex(photo.zIndex)
+                    }
                 }
-                // render texts
-                ForEach(page.texts) { textItem in
-                    TextView(text: textItem,
-                             activePageIndex: $activePageIndex,
-                             page: page,
-                             pageIndex: page.index,
-                             allTexts: page.texts
+                .zIndex(0)
 
-                    )
-                        .zIndex(1)
+                ZStack {
+                    // render texts
+                    ForEach(page.texts) { textItem in
+                        TextView(text: textItem,
+                                 activePageIndex: $activePageIndex,
+                                 page: page,
+                                 pageIndex: page.index,
+                                 allTexts: page.texts
+
+                        )
+                            .zIndex(textItem.zIndex)
+                    }
                 }
+                .zIndex(1)
             }
         }
     }

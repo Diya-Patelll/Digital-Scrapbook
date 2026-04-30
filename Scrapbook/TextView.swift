@@ -12,15 +12,22 @@ struct TextView: View {
     @Bindable var text: ScrapbookText
     @Binding var activePageIndex: Int
     @State private var dragOffset: CGSize = .zero
-    @State private var finalOffset: CGSize = .zero
+    @State private var isDragging = false
     @FocusState private var isFocused: Bool
-    @Environment(\.colorScheme) var colorScheme
     @Environment(\.modelContext) private var modelContext
-    @GestureState private var fingerOffset: CGSize = .zero
+    @GestureState private var activeScale: CGFloat = 1.0
     
     var page: ScrapbookPage
     let pageIndex: Int
     var allTexts: [ScrapbookText] // handles layering
+    
+    private var displayedScale: CGFloat {
+        CGFloat(text.scale) * softenedMagnification(activeScale)
+    }
+    
+    private func softenedMagnification(_ magnification: CGFloat) -> CGFloat {
+        1 + ((magnification - 1) * 0.35)
+    }
     
     var body: some View {
         TextField("Type here..", text: $text.content, axis: .vertical)
@@ -30,24 +37,51 @@ struct TextView: View {
             .foregroundStyle(text.boxColor)
             .cornerRadius(4)
             .focused($isFocused)
-            .offset(x: text.offSetX + fingerOffset.width,y: text.offSetY + fingerOffset.height)
+            .contentShape(Rectangle())
+            .scaleEffect(displayedScale)
+            .offset(x: text.offSetX + dragOffset.width, y: text.offSetY + dragOffset.height)
             .zIndex(text.zIndex)
-            .gesture(
-                DragGesture(minimumDistance: 0)
-                    .updating($fingerOffset) { value, state, _ in
-                        state = value.translation
-                    }
-                    .onChanged { _ in
-                        let maxZ = allTexts.map { $0.zIndex }.max() ?? 0
-                        if text.zIndex <= maxZ {
-                            text.zIndex = maxZ + 1
+            .transaction { transaction in
+                transaction.animation = nil
+            }
+            .highPriorityGesture(
+                DragGesture(minimumDistance: 1)
+                    .onChanged { value in
+                        if !isDragging {
+                            isDragging = true
+                            isFocused = false
+
+                            let maxZ = allTexts.map { $0.zIndex }.max() ?? 0
+                            if text.zIndex <= maxZ {
+                                text.zIndex = maxZ + 1
+                            }
                         }
+
+                        dragOffset = value.translation
                     }
                     .onEnded { value in
                         text.offSetX += value.translation.width
                         text.offSetY += value.translation.height
+                        dragOffset = .zero
+                        isDragging = false
                     }
-                )
+            )
+            .simultaneousGesture(
+                MagnifyGesture()
+                    .updating($activeScale) { value, state, _ in
+                        state = value.magnification
+                    }
+                    .onChanged { _ in
+                        isFocused = false
+                    }
+                    .onEnded { value in
+                        let nextScale = text.scale * softenedMagnification(value.magnification)
+                        text.scale = min(max(nextScale, 0.5), 3.0)
+                    }
+            )
+            .onTapGesture {
+                isFocused = true
+            }
             .onAppear {
                 if text.isNew && pageIndex == activePageIndex {
                     isFocused = true
